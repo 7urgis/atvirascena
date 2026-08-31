@@ -1,0 +1,13 @@
+baseURL: https://7urgis.github.io/atvirascena/
+languageCode: lt
+title: Atvira scena
+enableRobotsTXT: true
+
+params:
+  description: Gyvų koncertų įrašai vienoje vietoje.
+  repository: 7urgis/atvirascena
+
+disableKinds:
+  - section
+  - taxonomy
+  - term

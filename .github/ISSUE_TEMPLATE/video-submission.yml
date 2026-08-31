@@ -1,0 +1,28 @@
+name: Pasiūlyti koncertą
+description: Pasiūlykite viešą gyvo koncerto „YouTube“ įrašą
+title: "[Video submission] "
+body:
+  - type: input
+    id: youtube-url
+    attributes:
+      label: YouTube URL
+      description: Įklijuokite vieno viešo „YouTube“ vaizdo įrašo nuorodą.
+      placeholder: https://www.youtube.com/watch?v=...
+    validations:
+      required: true
+  - type: input
+    id: concert-title
+    attributes:
+      label: Concert title
+      description: Atlikėjas, renginys arba koncerto pavadinimas.
+      placeholder: Grupė — gyvai Vilniuje
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Patvirtinimas
+      options:
+        - label: Patvirtinu, kad tai viešas gyvo muzikinio pasirodymo įrašas.
+          required: true
+

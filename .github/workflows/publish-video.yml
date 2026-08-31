@@ -1,0 +1,59 @@
+name: Publish approved video
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  actions: write
+  contents: write
+  issues: write
+
+concurrency:
+  group: publish-approved-videos
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event.label.name == 'approved' && startsWith(github.event.issue.title, '[Video submission]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: master
+
+      - name: Validate and create video content
+        id: publish
+        run: node scripts/publish-submission.mjs "$GITHUB_EVENT_PATH" .
+
+      - name: Commit published video
+        if: steps.publish.outputs.status == 'published'
+        env:
+          VIDEO_ID: ${{ steps.publish.outputs.video_id }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "content/videos/${VIDEO_ID}.md"
+          git commit -m "Add approved concert video ${VIDEO_ID}"
+          git push
+
+      - name: Start website deployment
+        if: steps.publish.outputs.status == 'published'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-atvirascena.yml --ref master
+
+      - name: Reply to submission
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          PUBLISH_MESSAGE: ${{ steps.publish.outputs.message }}
+        run: gh issue comment "$ISSUE_URL" --body "$PUBLISH_MESSAGE"
+
+      - name: Close handled submission
+        if: steps.publish.outputs.status == 'published' || steps.publish.outputs.status == 'duplicate'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+        run: gh issue close "$ISSUE_URL"

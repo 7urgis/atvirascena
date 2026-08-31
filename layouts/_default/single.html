@@ -1,0 +1,15 @@
+{{ define "main" }}
+  <main class="single-video">
+    <a class="back-link" href="{{ site.Home.RelPermalink }}">← Visi koncertai</a>
+    <h1>{{ .Title }}</h1>
+    <div class="video-frame">
+      <iframe
+        src="https://www.youtube-nocookie.com/embed/{{ .Params.youtube_id }}"
+        title="{{ .Title }}"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen
+      ></iframe>
+    </div>
+  </main>
+{{ end }}
+

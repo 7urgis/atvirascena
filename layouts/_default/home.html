@@ -1,0 +1,112 @@
+{{ define "main" }}
+  {{ $videos := (where site.RegularPages "Section" "videos").ByDate.Reverse }}
+  <main class="page-shell">
+    {{ if $videos }}
+      {{ $featured := index $videos 0 }}
+      <section class="featured" id="player" aria-labelledby="featured-title">
+        <div class="featured-player">
+          <iframe
+            id="featured-frame"
+            src="https://www.youtube-nocookie.com/embed/{{ $featured.Params.youtube_id }}"
+            title="{{ $featured.Title }}"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+          ></iframe>
+        </div>
+        <div class="featured-details">
+          <div>
+            <h1 id="featured-title">{{ $featured.Title }}</h1>
+            <p id="featured-artist">{{ $featured.Params.artist }}</p>
+          </div>
+          <a
+            id="featured-link"
+            href="{{ $featured.Params.youtube_url }}"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Atidaryti „YouTube“ <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+
+      <section class="videos" aria-labelledby="videos-title">
+        <div class="section-heading">
+          <h2 id="videos-title">Visi koncertai</h2>
+          <span>{{ len $videos }} {{ if eq (len $videos) 1 }}įrašas{{ else }}įrašai{{ end }}</span>
+        </div>
+
+        <div class="video-grid">
+          {{ range $index, $video := $videos }}
+            <article class="video-card">
+              <button
+                class="video-choice{{ if eq $index 0 }} is-selected{{ end }}"
+                type="button"
+                data-video-id="{{ .Params.youtube_id }}"
+                data-video-title="{{ .Title }}"
+                data-video-artist="{{ .Params.artist }}"
+                data-video-url="{{ .Params.youtube_url }}"
+                aria-label="Žiūrėti: {{ .Title }}"
+                aria-current="{{ if eq $index 0 }}true{{ else }}false{{ end }}"
+              >
+                <span class="video-thumbnail">
+                  <img
+                    src="https://i.ytimg.com/vi/{{ .Params.youtube_id }}/hqdefault.jpg"
+                    alt=""
+                    width="480"
+                    height="360"
+                    loading="lazy"
+                  >
+                  <span class="play" aria-hidden="true">▶</span>
+                </span>
+                <span class="video-info">
+                  <strong>{{ .Title }}</strong>
+                  {{ with .Params.artist }}<span>{{ . }}</span>{{ end }}
+                </span>
+              </button>
+            </article>
+          {{ end }}
+        </div>
+      </section>
+    {{ else }}
+      <section class="empty-state">
+        <h1>Atvira scena</h1>
+        <p>Kol kas koncertų nėra. Pasiūlykite pirmąjį įrašą.</p>
+      </section>
+    {{ end }}
+
+    <section class="submit-section" id="prideti" aria-labelledby="submit-title">
+      <div class="submit-copy">
+        <h2 id="submit-title">Pasiūlykite koncertą</h2>
+        <p>Įklijuokite viešo „YouTube“ koncerto nuorodą. Įrašas pasirodys svetainėje po patvirtinimo.</p>
+      </div>
+
+      <form class="submit-form" id="video-submission" data-repository="{{ site.Params.repository }}">
+        <div class="field">
+          <label for="youtube-url">„YouTube“ nuoroda</label>
+          <input
+            id="youtube-url"
+            name="youtube-url"
+            type="url"
+            inputmode="url"
+            placeholder="https://www.youtube.com/watch?v=…"
+            autocomplete="url"
+            required
+          >
+          <p class="field-error" id="url-error" aria-live="polite"></p>
+        </div>
+
+        <div class="field">
+          <label for="concert-title">Atlikėjas arba koncerto pavadinimas <span>(nebūtina)</span></label>
+          <input
+            id="concert-title"
+            name="concert-title"
+            type="text"
+            maxlength="120"
+            placeholder="Pavyzdžiui: Grupė — gyvai Vilniuje"
+          >
+        </div>
+
+        <button class="primary-button" type="submit">Tęsti per „GitHub“</button>
+        <p class="form-note">Reikės prisijungti prie nemokamos „GitHub“ paskyros. Vaizdo įrašas nebus paskelbtas automatiškai.</p>
+      </form>
+    </section>
+  </main>
+{{ end }}
