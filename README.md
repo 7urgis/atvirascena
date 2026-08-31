@@ -30,4 +30,3 @@ node --test
 Prieš pirmą pasiūlymą repozitorijos **Issues → Labels** skiltyje sukurkite žymą `approved`. Repozitorijos **Settings → Pages → Build and deployment** skiltyje kaip šaltinį pasirinkite **GitHub Actions**.
 
 Norėdami pridėti įrašą rankiniu būdu, nukopijuokite esamą failą `content/videos/` kataloge ir pakeiskite jo duomenis. Failo pavadinimui patogu naudoti 11 simbolių „YouTube“ ID.
-
