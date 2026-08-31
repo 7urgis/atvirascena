@@ -19,6 +19,7 @@ hugo --minify
 node --test
 ```
 
+
 ## Kaip paskelbiamas pasiūlymas
 
 1. Lankytojas užpildo formą svetainėje ir sukuria „GitHub“ issue.
