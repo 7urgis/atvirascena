@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   publish:
-    if: github.event.issue.state == 'open' && startsWith(github.event.issue.title, '[Video submission]')
+    if: github.event.issue.state == 'open' && contains(github.event.issue.body, '### YouTube URL') && contains(github.event.issue.body, '### Concert title')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
