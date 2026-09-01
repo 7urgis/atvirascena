@@ -18,9 +18,9 @@
             <h1 id="featured-title">{{ $featured.Title }}</h1>
             <p id="featured-artist">{{ $featured.Params.artist }}</p>
             {{ with $featured.Params.submitted_by }}
-              <p class="featured-submitter" id="featured-submitter">pridėjo <a id="featured-submitter-link" href="https://github.com/{{ . }}" target="_blank" rel="noopener noreferrer">@{{ . }}</a></p>
+              <p class="featured-submitter" id="featured-submitter">įdėjo <a id="featured-submitter-link" href="https://github.com/{{ . }}" target="_blank" rel="noopener noreferrer">@{{ . }}</a></p>
             {{ else }}
-              <p class="featured-submitter" id="featured-submitter" hidden>pridėjo <a id="featured-submitter-link" href="" target="_blank" rel="noopener noreferrer"></a></p>
+              <p class="featured-submitter" id="featured-submitter" hidden>įdėjo <a id="featured-submitter-link" href="" target="_blank" rel="noopener noreferrer"></a></p>
             {{ end }}
           </div>
           <a
@@ -68,7 +68,7 @@
                 </span>
               </button>
               {{ with .Params.submitted_by }}
-                <a class="video-submitter" href="https://github.com/{{ . }}" target="_blank" rel="noopener noreferrer">pridėjo @{{ . }}</a>
+                <a class="video-submitter" href="https://github.com/{{ . }}" target="_blank" rel="noopener noreferrer">įdėjo @{{ . }}</a>
               {{ end }}
             </article>
           {{ end }}
