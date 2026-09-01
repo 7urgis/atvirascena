@@ -39,16 +39,22 @@ const featuredFrame = document.querySelector("#featured-frame");
 const featuredTitle = document.querySelector("#featured-title");
 const featuredArtist = document.querySelector("#featured-artist");
 const featuredLink = document.querySelector("#featured-link");
+const featuredSubmitter = document.querySelector("#featured-submitter");
+const featuredSubmitterLink = document.querySelector("#featured-submitter-link");
 
 function showVideo(choice, { autoplay = false, scroll = false } = {}) {
   if (!featuredFrame) return;
 
   const autoplayQuery = autoplay ? "?autoplay=1" : "";
+  const submitter = choice.dataset.videoSubmitter;
   featuredFrame.src = `https://www.youtube-nocookie.com/embed/${choice.dataset.videoId}${autoplayQuery}`;
   featuredFrame.title = choice.dataset.videoTitle;
   featuredTitle.textContent = choice.dataset.videoTitle;
   featuredArtist.textContent = choice.dataset.videoArtist || "";
   featuredLink.href = choice.dataset.videoUrl;
+  featuredSubmitter.hidden = !submitter;
+  featuredSubmitterLink.textContent = submitter ? `@${submitter}` : "";
+  featuredSubmitterLink.href = submitter ? `https://github.com/${encodeURIComponent(submitter)}` : "";
 
   videoChoices.forEach((item) => {
     const selected = item === choice;

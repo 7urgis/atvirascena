@@ -143,6 +143,28 @@ input {
   text-decoration: underline;
 }
 
+.featured-details .featured-submitter {
+  font-size: 0.82rem;
+}
+
+.featured-submitter a,
+.video-submitter {
+  color: var(--muted);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.featured-submitter a:hover,
+.video-submitter:hover {
+  text-decoration: underline;
+}
+
+.video-submitter {
+  display: inline-block;
+  margin-top: 5px;
+  font-size: 0.78rem;
+}
+
 .videos {
   padding-bottom: 72px;
 }

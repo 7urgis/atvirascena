@@ -17,6 +17,11 @@
           <div>
             <h1 id="featured-title">{{ $featured.Title }}</h1>
             <p id="featured-artist">{{ $featured.Params.artist }}</p>
+            {{ with $featured.Params.submitted_by }}
+              <p class="featured-submitter" id="featured-submitter">pridėjo <a id="featured-submitter-link" href="https://github.com/{{ . }}" target="_blank" rel="noopener noreferrer">@{{ . }}</a></p>
+            {{ else }}
+              <p class="featured-submitter" id="featured-submitter" hidden>pridėjo <a id="featured-submitter-link" href="" target="_blank" rel="noopener noreferrer"></a></p>
+            {{ end }}
           </div>
           <a
             id="featured-link"
@@ -42,6 +47,7 @@
                 data-video-id="{{ .Params.youtube_id }}"
                 data-video-title="{{ .Title }}"
                 data-video-artist="{{ .Params.artist }}"
+                data-video-submitter="{{ .Params.submitted_by }}"
                 data-video-url="{{ .Params.youtube_url }}"
                 aria-label="Žiūrėti: {{ .Title }}"
                 aria-current="{{ if eq $index 0 }}true{{ else }}false{{ end }}"
@@ -61,6 +67,9 @@
                   {{ with .Params.artist }}<span>{{ . }}</span>{{ end }}
                 </span>
               </button>
+              {{ with .Params.submitted_by }}
+                <a class="video-submitter" href="https://github.com/{{ . }}" target="_blank" rel="noopener noreferrer">pridėjo @{{ . }}</a>
+              {{ end }}
             </article>
           {{ end }}
         </div>
