@@ -4,6 +4,16 @@
   --line: #e5e5e5;
   --red: #ff0033;
   --radius: 12px;
+  --bg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f5f5f5;
+    --muted: #a0a0a0;
+    --line: #333333;
+    --bg: #1a1a1a;
+  }
 }
 
 * {
@@ -17,7 +27,7 @@ html {
 body {
   margin: 0;
   color: var(--ink);
-  background: #fff;
+  background: var(--bg);
   font-family: Arial, Helvetica, sans-serif;
   line-height: 1.45;
 }
@@ -42,6 +52,12 @@ input {
   padding: 0 max(24px, calc((100vw - 1240px) / 2));
   border-bottom: 1px solid var(--line);
   background: rgb(255 255 255 / 96%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .site-header {
+    background: rgb(26 26 26 / 96%);
+  }
 }
 
 .brand {
@@ -333,7 +349,13 @@ a:focus-visible {
   border-radius: 7px;
   outline: none;
   color: var(--ink);
-  background: #fff;
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  .field input {
+    border-color: #444444;
+  }
 }
 
 .field input:focus {
@@ -361,7 +383,7 @@ a:focus-visible {
   padding: 0 17px;
   border: 1px solid var(--ink);
   border-radius: 7px;
-  color: #fff;
+  color: var(--bg);;
   background: var(--ink);
   font-weight: 700;
   text-decoration: none;
@@ -370,7 +392,7 @@ a:focus-visible {
 
 .primary-button:hover {
   color: var(--ink);
-  background: #fff;
+  background: var(--bg);
 }
 
 .form-note {
