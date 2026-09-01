@@ -1,32 +1,33 @@
-# Atvira scena
+# Atvira Scena
 
-Minimalus „Hugo“ tinklalapis, kuriame bendruomenė gali siūlyti viešus gyvų koncertų „YouTube“ įrašus.
+[**Watch on AtviraScena →**](https://7urgis.github.io/atvirascena/)
 
-## Paleidimas kompiuteryje
+A minimal Hugo website where the community can submit public YouTube recordings of live concerts.
 
-Reikalingas [Hugo](https://gohugo.io/installation/).
+## Running Locally
+
+Requires [Hugo](https://gohugo.io/installation/).
 
 ```sh
 hugo server
 ```
 
-Atidarykite `http://localhost:1313`.
+Open `http://localhost:1313`.
 
-Patikros:
+Checks:
 
 ```sh
 hugo --minify
 node --test
 ```
 
+## How a Submission Is Published
 
-## Kaip paskelbiamas pasiūlymas
+1. A visitor fills out the form on the website, creating a GitHub issue.
+2. `publish-video.yml` validates the link and checks that the visitor has not submitted 5 posts within the last 24 hours.
+3. A valid submission is immediately saved to `content/videos/`; the workflow leaves a comment and closes the issue.
+4. `deploy-atvirascena.yml` rebuilds and publishes the website.
 
-1. Lankytojas užpildo formą svetainėje ir sukuria „GitHub“ issue.
-2. `publish-video.yml` patikrina nuorodą ir ar lankytojas per paskutines 24 valandas nepaskelbė 5 įrašų.
-3. Tinkamas pasiūlymas iš karto įrašomas į `content/videos/`; veiksena pakomentuoja ir uždaro issue.
-4. `deploy-atvirascena.yml` iš naujo sukuria ir paskelbia svetainę.
+No manual approval label is required. A single GitHub user can automatically publish up to 5 posts within a rolling 24-hour window. In the repository under **Settings → Pages → Build and deployment**, select **GitHub Actions** as the source.
 
-Papildomo patvirtinimo žyma nereikalinga. Vienas „GitHub“ naudotojas gali automatiškai paskelbti iki 5 įrašų per slenkantį 24 valandų laikotarpį. Repozitorijos **Settings → Pages → Build and deployment** skiltyje kaip šaltinį pasirinkite **GitHub Actions**.
-
-Norėdami pridėti įrašą rankiniu būdu, nukopijuokite esamą failą `content/videos/` kataloge ir pakeiskite jo duomenis. Failo pavadinimui patogu naudoti 11 simbolių „YouTube“ ID.
+To add an entry manually, duplicate an existing file in the `content/videos/` directory and update its metadata. It is convenient to use the 11-character YouTube ID as the filename.
