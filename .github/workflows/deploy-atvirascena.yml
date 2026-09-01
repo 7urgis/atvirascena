@@ -1,4 +1,4 @@
-name: Deploy Atvira scena to Pages
+name: Deploy AtviraScena to Pages
 
 on:
   push:

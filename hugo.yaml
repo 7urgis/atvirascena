@@ -1,6 +1,6 @@
 baseURL: https://7urgis.github.io/atvirascena/
 languageCode: lt
-title: Atvira scena
+title: AtviraScena
 enableRobotsTXT: true
 
 params:

@@ -1,4 +1,4 @@
-# Atvira Scena
+# AtviraScena
 
 [**Watch on AtviraScena →**](https://7urgis.github.io/atvirascena/)
 

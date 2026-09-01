@@ -1,4 +1,4 @@
 ---
-title: Atvira scena
+title: AtviraScena
 ---
 

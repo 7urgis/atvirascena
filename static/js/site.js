@@ -111,7 +111,7 @@ if (form) {
       suppliedTitle || "(not provided)",
       "",
       "---",
-      "Submitted through the Atvira scena website."
+      "Submitted through the AtviraScena website."
     ].join("\n");
     const params = new URLSearchParams({ title: issueTitle, body: issueBody });
 
