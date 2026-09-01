@@ -1,8 +1,8 @@
-name: Publish approved video
+name: Publish submitted video
 
 on:
   issues:
-    types: [labeled]
+    types: [opened, edited]
 
 permissions:
   actions: write
@@ -10,12 +10,12 @@ permissions:
   issues: write
 
 concurrency:
-  group: publish-approved-videos
+  group: publish-submitted-videos
   cancel-in-progress: false
 
 jobs:
   publish:
-    if: github.event.label.name == 'approved' && startsWith(github.event.issue.title, '[Video submission]')
+    if: github.event.issue.state == 'open' && startsWith(github.event.issue.title, '[Video submission]')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -35,7 +35,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add "content/videos/${VIDEO_ID}.md"
-          git commit -m "Add approved concert video ${VIDEO_ID}"
+          git commit -m "Add submitted concert video ${VIDEO_ID}"
           git push
 
       - name: Start website deployment
@@ -52,7 +52,7 @@ jobs:
         run: gh issue comment "$ISSUE_URL" --body "$PUBLISH_MESSAGE"
 
       - name: Close handled submission
-        if: steps.publish.outputs.status == 'published' || steps.publish.outputs.status == 'duplicate'
+        if: steps.publish.outputs.status == 'published' || steps.publish.outputs.status == 'duplicate' || steps.publish.outputs.status == 'rate_limited'
         env:
           GH_TOKEN: ${{ github.token }}
           ISSUE_URL: ${{ github.event.issue.html_url }}

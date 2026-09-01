@@ -2,6 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+export const MAX_SUBMISSIONS_PER_WINDOW = 5;
+export const SUBMISSION_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 export function getYouTubeId(value) {
   let url;
 
@@ -47,7 +50,32 @@ function finish(status, message, videoId = "") {
   setOutput("video_id", videoId);
 }
 
-export function publish(eventPath, projectRoot) {
+export function countRecentSubmissions(videosDirectory, submitter, now = new Date()) {
+  if (!fs.existsSync(videosDirectory)) return 0;
+
+  const normalizedSubmitter = submitter.toLowerCase();
+  const windowStart = now.getTime() - SUBMISSION_WINDOW_MS;
+
+  return fs.readdirSync(videosDirectory, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+    .reduce((count, entry) => {
+      try {
+        const content = JSON.parse(fs.readFileSync(path.join(videosDirectory, entry.name), "utf8"));
+        const publishedAt = Date.parse(content.date);
+        const sameSubmitter = content.submitted_by?.toLowerCase() === normalizedSubmitter;
+        const insideWindow = Number.isFinite(publishedAt)
+          && publishedAt >= windowStart
+          && publishedAt <= now.getTime();
+
+        return sameSubmitter && insideWindow ? count + 1 : count;
+      } catch {
+        // Older hand-authored Markdown files do not contain submission metadata.
+        return count;
+      }
+    }, 0);
+}
+
+export function publish(eventPath, projectRoot, now = new Date()) {
   const event = JSON.parse(fs.readFileSync(eventPath, "utf8"));
   const body = event.issue?.body ?? "";
   const youtubeUrl = readSection(body, "YouTube URL");
@@ -66,6 +94,17 @@ export function publish(eventPath, projectRoot) {
     return;
   }
 
+  const submitter = event.issue?.user?.login ?? "unknown";
+  const recentSubmissionCount = countRecentSubmissions(videosDirectory, submitter, now);
+
+  if (recentSubmissionCount >= MAX_SUBMISSIONS_PER_WINDOW) {
+    finish(
+      "rate_limited",
+      `Pasiekėte ${MAX_SUBMISSIONS_PER_WINDOW} paskelbtų įrašų limitą per 24 valandas. Bandykite dar kartą vėliau.`
+    );
+    return;
+  }
+
   const submittedTitle = readSection(body, "Concert title");
   const fallbackTitle = event.issue?.title?.replace(/^\[Video submission\]\s*/, "").trim();
   const title = submittedTitle && submittedTitle !== "(not provided)"
@@ -73,10 +112,10 @@ export function publish(eventPath, projectRoot) {
     : (fallbackTitle || `YouTube concert ${videoId}`).slice(0, 120);
   const frontMatter = {
     title,
-    date: new Date().toISOString(),
+    date: now.toISOString(),
     youtube_id: videoId,
     youtube_url: `https://www.youtube.com/watch?v=${videoId}`,
-    submitted_by: event.issue?.user?.login ?? "unknown"
+    submitted_by: submitter
   };
 
   fs.mkdirSync(videosDirectory, { recursive: true });
