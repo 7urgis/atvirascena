@@ -66,16 +66,9 @@ function embedUrl(videoId, autoplay) {
 function showVideo(choice, { autoplay = false, scroll = false } = {}) {
   if (!featuredFrame) return;
 
+  const autoplayQuery = autoplay ? "?autoplay=1" : "";
   const submitter = choice.dataset.videoSubmitter;
-  activeVideoTitle = choice.dataset.videoTitle;
-  setPlaybackTitle(false);
-
-  if (youtubePlayerReady) {
-    const method = autoplay ? "loadVideoById" : "cueVideoById";
-    youtubePlayer[method](choice.dataset.videoId);
-  } else {
-    featuredFrame.src = embedUrl(choice.dataset.videoId, autoplay);
-  }
+  featuredFrame.src = `https://www.youtube-nocookie.com/embed/${choice.dataset.videoId}${autoplayQuery}`;
   featuredFrame.title = choice.dataset.videoTitle;
   featuredTitle.textContent = choice.dataset.videoTitle;
   featuredArtist.textContent = choice.dataset.videoArtist || "";
@@ -104,43 +97,6 @@ videoChoices.forEach((choice) => {
 if (videoChoices.length > 0) {
   const randomIndex = Math.floor(Math.random() * videoChoices.length);
   showVideo(videoChoices[randomIndex]);
-}
-
-function initializeYouTubePlayer() {
-  youtubePlayer = new YT.Player(featuredFrame, {
-    events: {
-      onReady() {
-        youtubePlayerReady = true;
-      },
-      onStateChange(event) {
-        if (event.data === YT.PlayerState.PLAYING) {
-          setPlaybackTitle(true);
-        } else if (
-          event.data === YT.PlayerState.PAUSED ||
-          event.data === YT.PlayerState.ENDED ||
-          event.data === YT.PlayerState.CUED ||
-          event.data === YT.PlayerState.UNSTARTED
-        ) {
-          setPlaybackTitle(false);
-        }
-      },
-      onError() {
-        setPlaybackTitle(false);
-      }
-    }
-  });
-}
-
-if (featuredFrame) {
-  if (window.YT?.Player) {
-    initializeYouTubePlayer();
-  } else {
-    window.onYouTubeIframeAPIReady = initializeYouTubePlayer;
-
-    const apiScript = document.createElement("script");
-    apiScript.src = "https://www.youtube.com/iframe_api";
-    document.head.append(apiScript);
-  }
 }
 
 const form = document.querySelector("#video-submission");
