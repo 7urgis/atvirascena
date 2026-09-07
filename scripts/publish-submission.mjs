@@ -79,7 +79,7 @@ export async function getVideoDuration(videoId, fetchImpl = fetch) {
   const response = await fetchImpl(`https://www.youtube.com/watch?v=${videoId}`, {
     signal: AbortSignal.timeout(20000)
   });
-  if (!response.ok) throw new Error("YouTube metadata request failed");
+  if (!response.ok) throw new Error(`YouTube video page returned HTTP ${response.status}`);
   const html = await response.text();
   const duration = Number(html.match(/"lengthSeconds"\s*:\s*"(\d+)"/)?.[1]);
   if (!Number.isSafeInteger(duration) || duration <= 0 || /"isLiveNow"\s*:\s*true/.test(html)) {
@@ -95,10 +95,26 @@ export async function getVideoMetadata(videoId, fetchImpl = fetch) {
       signal: AbortSignal.timeout(20000)
     })
   ]);
-  if (!response.ok) throw new Error("YouTube title request failed");
+  if (!response.ok) throw new Error(`YouTube title request returned HTTP ${response.status}`);
   const metadata = await response.json();
   if (typeof metadata.title !== "string" || !metadata.title.trim()) throw new Error("Missing YouTube title");
   return { title: metadata.title.trim(), duration };
+}
+
+export async function lookupWithRetry(videoId, lookup = getVideoMetadata, wait = ms => new Promise(resolve => setTimeout(resolve, ms))) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const metadata = await lookup(videoId);
+      if (!Number.isSafeInteger(metadata.duration) || metadata.duration <= 0 ||
+          typeof metadata.title !== "string" || !metadata.title.trim()) {
+        throw new Error("YouTube returned incomplete title or duration metadata");
+      }
+      return metadata;
+    } catch (error) {
+      if (attempt === 2) throw error;
+      await wait(1000 * (attempt + 1));
+    }
+  }
 }
 
 export async function publish(eventPath, projectRoot, now = new Date(), metadataLookup = getVideoMetadata) {
@@ -134,12 +150,13 @@ export async function publish(eventPath, projectRoot, now = new Date(), metadata
   let title;
   let duration;
   try {
-    ({ title, duration } = await metadataLookup(videoId));
+    ({ title, duration } = await lookupWithRetry(videoId, metadataLookup));
     if (!Number.isSafeInteger(duration) || duration <= 0 || typeof title !== "string" || !title.trim()) {
       throw new Error("Invalid metadata");
     }
     title = title.trim();
-  } catch {
+  } catch (error) {
+    console.error(`YouTube metadata lookup failed for ${videoId}: ${error.message}`);
     finish("metadata_unavailable", "Nepavyko gauti įrašo pavadinimo arba trukmės. Reikalingas viešas pasibaigusio koncerto įrašas. Pabandykite vėliau redaguodami šį pasiūlymą.");
     return;
   }

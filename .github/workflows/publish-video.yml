@@ -57,3 +57,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
         run: gh issue close "$ISSUE_URL"
+
+      - name: Report metadata failure
+        if: steps.publish.outputs.status == 'metadata_unavailable'
+        run: |
+          echo "::error::YouTube metadata lookup failed after three attempts. No video was published or deployed. See the validation step for details. Re-run this workflow to retry."
+          exit 1

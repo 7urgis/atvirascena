@@ -8,9 +8,26 @@ import {
   getYouTubeId,
   getVideoDuration,
   getVideoMetadata,
+  lookupWithRetry,
   publish,
   readSection
 } from "../scripts/publish-submission.mjs";
+
+test("transient metadata failures retry and permanent failures stop after three attempts", async () => {
+  let calls = 0;
+  const metadata = { title: "Concert", duration: 120 };
+  assert.deepEqual(await lookupWithRetry("VzXYvyFqM4Y", async () => {
+    if (++calls < 3) throw new Error("Temporary failure");
+    return metadata;
+  }, async () => {}), metadata);
+  assert.equal(calls, 3);
+  calls = 0;
+  await assert.rejects(lookupWithRetry("VzXYvyFqM4Y", async () => {
+    calls++;
+    throw new Error("Unavailable");
+  }, async () => {}), /Unavailable/);
+  assert.equal(calls, 3);
+});
 
 test("extracts IDs from supported YouTube URLs", () => {
   const id = "VzXYvyFqM4Y";
