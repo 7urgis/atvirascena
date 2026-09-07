@@ -75,36 +75,62 @@ export function countRecentSubmissions(videosDirectory, submitter, now = new Dat
     }, 0);
 }
 
-export async function getVideoDuration(videoId, fetchImpl = fetch) {
-  const response = await fetchImpl(`https://www.youtube.com/watch?v=${videoId}`, {
-    signal: AbortSignal.timeout(20000)
-  });
-  if (!response.ok) throw new Error(`YouTube video page returned HTTP ${response.status}`);
-  const html = await response.text();
-  const duration = Number(html.match(/"lengthSeconds"\s*:\s*"(\d+)"/)?.[1]);
-  if (!Number.isSafeInteger(duration) || duration <= 0 || /"isLiveNow"\s*:\s*true/.test(html)) {
-    throw new Error("A recording with a known duration is required");
+export function parseDuration(value) {
+  if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) {
+    return value;
   }
-  return duration;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) {
+      const seconds = Number(trimmed);
+      if (Number.isSafeInteger(seconds) && seconds > 0) return seconds;
+    }
+    const match = trimmed.match(/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/);
+    if (match) {
+      const seconds = Number(match[1] || 0) * 86400 + Number(match[2] || 0) * 3600 +
+        Number(match[3] || 0) * 60 + Number(match[4] || 0);
+      if (Number.isSafeInteger(seconds) && seconds > 0) return seconds;
+    }
+  }
+  throw new Error("Video has no valid recording duration");
 }
 
-export async function getVideoMetadata(videoId, fetchImpl = fetch) {
-  const [duration, response] = await Promise.all([
-    getVideoDuration(videoId, fetchImpl),
-    fetchImpl(`https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`, {
-      signal: AbortSignal.timeout(20000)
-    })
-  ]);
-  if (!response.ok) throw new Error(`YouTube title request returned HTTP ${response.status}`);
-  const metadata = await response.json();
-  if (typeof metadata.title !== "string" || !metadata.title.trim()) throw new Error("Missing YouTube title");
-  return { title: metadata.title.trim(), duration };
+export async function getVideoMetadata(videoId, fetchImpl = fetch, body = "") {
+  const durationRaw = readSection(body, "Duration") || readSection(body, "Duration (seconds)");
+  let duration;
+  if (durationRaw) {
+    duration = parseDuration(durationRaw);
+  } else {
+    throw new Error("Video has no valid recording duration");
+  }
+
+  let title = readSection(body, "Title") || readSection(body, "Concert title");
+  if (!title) {
+    let response;
+    try {
+      response = await fetchImpl(
+        `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`,
+        { signal: AbortSignal.timeout(20000) }
+      );
+    } catch {
+      throw new Error("YouTube title request failed or timed out");
+    }
+    if (!response.ok) throw new Error(`YouTube title request returned HTTP ${response.status}`);
+    const metadata = await response.json();
+    title = metadata.title;
+  }
+
+  if (typeof title !== "string" || !title.trim()) {
+    throw new Error("Missing YouTube title");
+  }
+
+  return { title: title.trim(), duration };
 }
 
-export async function lookupWithRetry(videoId, lookup = getVideoMetadata, wait = ms => new Promise(resolve => setTimeout(resolve, ms))) {
+export async function lookupWithRetry(videoId, lookup = getVideoMetadata, body = "", wait = ms => new Promise(resolve => setTimeout(resolve, ms))) {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const metadata = await lookup(videoId);
+      const metadata = await lookup(videoId, fetch, body);
       if (!Number.isSafeInteger(metadata.duration) || metadata.duration <= 0 ||
           typeof metadata.title !== "string" || !metadata.title.trim()) {
         throw new Error("YouTube returned incomplete title or duration metadata");
@@ -150,7 +176,7 @@ export async function publish(eventPath, projectRoot, now = new Date(), metadata
   let title;
   let duration;
   try {
-    ({ title, duration } = await lookupWithRetry(videoId, metadataLookup));
+    ({ title, duration } = await lookupWithRetry(videoId, (id, fetchImpl) => metadataLookup(id, fetchImpl, body), body));
     if (!Number.isSafeInteger(duration) || duration <= 0 || typeof title !== "string" || !title.trim()) {
       throw new Error("Invalid metadata");
     }

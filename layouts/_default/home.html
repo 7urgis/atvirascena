@@ -84,7 +84,7 @@
     <section class="submit-section" id="prideti" aria-labelledby="submit-title">
       <div class="submit-copy">
         <h2 id="submit-title">Pasiūlykite koncertą</h2>
-        <p>Įklijuokite viešo „YouTube“ koncerto nuorodą. Pavadinimas bus paimtas iš „YouTube“, o tinkamas įrašas svetainėje pasirodys automatiškai.</p>
+        <p>Įklijuokite viešo „YouTube“ koncerto nuorodą. Pavadinimas ir trukmė bus nustatyti automatiškai.</p>
       </div>
 
       <form class="submit-form" id="video-submission" data-repository="{{ site.Params.repository }}">
@@ -102,7 +102,17 @@
           <p class="field-error" id="url-error" aria-live="polite"></p>
         </div>
 
-        <button class="primary-button" type="submit">Tęsti per „GitHub“</button>
+        <div class="submission-preview" id="submission-preview" hidden>
+          <div class="preview-player-wrapper">
+            <div id="preview-player-container"></div>
+          </div>
+          <div class="preview-info" id="preview-info">
+            <p class="preview-title" id="preview-title"></p>
+            <p class="preview-duration" id="preview-duration"></p>
+          </div>
+        </div>
+
+        <button class="primary-button" id="submit-button" type="submit">Tęsti per „GitHub“</button>
         <p class="form-note">Reikės prisijungti prie nemokamos „GitHub“ paskyros. Galima paskelbti iki 5 įrašų per 24 valandas.</p>
       </form>
     </section>

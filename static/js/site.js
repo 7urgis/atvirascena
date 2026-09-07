@@ -102,11 +102,151 @@ if (videoChoices.length > 0) {
 const form = document.querySelector("#video-submission");
 
 if (form) {
+  const urlInput = form.querySelector("#youtube-url");
+  const error = form.querySelector("#url-error");
+  const previewContainer = form.querySelector("#submission-preview");
+  const previewPlayerWrapper = form.querySelector("#preview-player-container");
+  const previewTitleEl = form.querySelector("#preview-title");
+  const previewDurationEl = form.querySelector("#preview-duration");
+
+  let currentVideoId = null;
+  let previewTitle = "";
+  let previewDuration = null;
+  let previewPlayer = null;
+  let durationInterval = null;
+  let ytApiPromise = null;
+
+  function loadYouTubeApi() {
+    if (ytApiPromise) return ytApiPromise;
+    ytApiPromise = new Promise((resolve) => {
+      if (window.YT && window.YT.Player) {
+        resolve(window.YT);
+        return;
+      }
+      const prev = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof prev === "function") prev();
+        resolve(window.YT);
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(script);
+    });
+    return ytApiPromise;
+  }
+
+  function formatSeconds(totalSeconds) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const parts = [];
+    if (hours > 0) parts.push(`${hours} val.`);
+    if (minutes > 0 || hours > 0) parts.push(`${minutes} min.`);
+    parts.push(`${seconds} s`);
+    return parts.join(" ");
+  }
+
+  function updatePreviewState() {
+    if (!previewTitleEl || !previewDurationEl) return;
+    previewTitleEl.textContent = previewTitle || "Įkeliamas pavadinimas...";
+    if (previewDuration) {
+      previewDurationEl.textContent = `Trukmė: ${formatSeconds(previewDuration)}`;
+    } else {
+      previewDurationEl.textContent = "Nustatoma trukmė...";
+    }
+  }
+
+  function clearPreview() {
+    currentVideoId = null;
+    previewTitle = "";
+    previewDuration = null;
+    if (durationInterval) {
+      clearInterval(durationInterval);
+      durationInterval = null;
+    }
+    if (previewPlayer && typeof previewPlayer.destroy === "function") {
+      try { previewPlayer.destroy(); } catch {}
+      previewPlayer = null;
+    }
+    if (previewPlayerWrapper) previewPlayerWrapper.replaceChildren();
+    if (previewContainer) previewContainer.hidden = true;
+  }
+
+  function checkPlayerDuration(player) {
+    if (previewDuration) return;
+    try {
+      const d = player.getDuration();
+      if (typeof d === "number" && d > 0) {
+        previewDuration = Math.round(d);
+        if (durationInterval) {
+          clearInterval(durationInterval);
+          durationInterval = null;
+        }
+        updatePreviewState();
+      }
+    } catch {}
+  }
+
+  function loadPreview(videoId) {
+    if (videoId === currentVideoId) return;
+    clearPreview();
+    currentVideoId = videoId;
+    if (previewContainer) previewContainer.hidden = false;
+    updatePreviewState();
+
+    fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.title && currentVideoId === videoId) {
+          previewTitle = data.title;
+          updatePreviewState();
+        }
+      })
+      .catch(() => {});
+
+    loadYouTubeApi().then((YT) => {
+      if (currentVideoId !== videoId) return;
+      const playerEl = document.createElement("div");
+      playerEl.id = "preview-yt-player";
+      if (previewPlayerWrapper) previewPlayerWrapper.replaceChildren(playerEl);
+
+      previewPlayer = new YT.Player("preview-yt-player", {
+        height: "180",
+        width: "320",
+        videoId: videoId,
+        events: {
+          onReady: (event) => {
+            checkPlayerDuration(event.target);
+            if (!previewDuration) {
+              durationInterval = setInterval(() => checkPlayerDuration(event.target), 300);
+            }
+          },
+          onStateChange: (event) => {
+            checkPlayerDuration(event.target);
+          }
+        }
+      });
+    });
+  }
+
+  let inputDebounce = null;
+  urlInput.addEventListener("input", () => {
+    if (inputDebounce) clearTimeout(inputDebounce);
+    inputDebounce = setTimeout(() => {
+      const videoId = getYouTubeId(urlInput.value);
+      if (videoId) {
+        urlInput.removeAttribute("aria-invalid");
+        error.textContent = "";
+        loadPreview(videoId);
+      } else {
+        clearPreview();
+      }
+    }, 250);
+  });
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
 
-    const urlInput = form.querySelector("#youtube-url");
-    const error = form.querySelector("#url-error");
     const videoId = getYouTubeId(urlInput.value);
 
     if (!videoId) {
@@ -120,14 +260,23 @@ if (form) {
     error.textContent = "";
 
     const issueTitle = `[Video submission] ${videoId}`;
-    const issueBody = [
+    const issueBodyParts = [
       "### YouTube URL",
       "",
-      urlInput.value.trim(),
-      "",
-      "---",
-      "Submitted through the AtviraScena website."
-    ].join("\n");
+      urlInput.value.trim()
+    ];
+
+    if (previewTitle) {
+      issueBodyParts.push("", "### Title", "", previewTitle);
+    }
+
+    if (previewDuration) {
+      issueBodyParts.push("", "### Duration", "", String(previewDuration));
+    }
+
+    issueBodyParts.push("", "---", "Submitted through the AtviraScena website.");
+
+    const issueBody = issueBodyParts.join("\n");
     const params = new URLSearchParams({ title: issueTitle, body: issueBody });
 
     window.location.href = `https://github.com/${form.dataset.repository}/issues/new?${params}`;

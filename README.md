@@ -29,11 +29,9 @@ position. No backend or API key is needed. Playback starts muted when allowed;
 visitors can click to join with sound. The player checks the schedule every second,
 corrects drift over three seconds, and rejoins the current position after a pause.
 
-New submissions automatically join the Live playlist when published. The existing
-GitHub Actions publishing workflow reads each recording's title and duration from YouTube
-and saves both the concert and playlist in the same commit. No backend or API key
-is needed. If YouTube does not return a valid title and duration, the issue remains open
-with a retry message; editing the issue retries publishing.
+New submissions automatically join the Live playlist when published. The GitHub Actions
+publishing workflow saves both the concert and playlist in the same commit. No backend
+or API key is needed.
 
 Open Live pages check the static playlist every minute and when returning to the
 tab. A playlist update recalculates the shared position and may switch the current
@@ -46,7 +44,9 @@ onto different concerts.
 
 ## How a Submission Is Published
 
-1. A visitor pastes a YouTube URL into the form, creating a GitHub issue. The title is retrieved automatically from YouTube metadata.
+No Google Cloud setup or API key is required.
+
+1. A visitor pastes a YouTube URL into the form. The browser loads a YouTube video preview, retrieves its title and duration, and includes them in a GitHub issue template.
 2. `publish-video.yml` validates the link and checks that the visitor has not submitted 5 posts within the last 24 hours.
 3. A valid submission is immediately saved to `content/videos/`; the workflow leaves a comment and closes the issue.
 4. `deploy-atvirascena.yml` rebuilds and publishes the website.

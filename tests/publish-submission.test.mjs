@@ -6,7 +6,7 @@ import test from "node:test";
 import {
   countRecentSubmissions,
   getYouTubeId,
-  getVideoDuration,
+  parseDuration,
   getVideoMetadata,
   lookupWithRetry,
   publish,
@@ -37,23 +37,29 @@ test("extracts IDs from supported YouTube URLs", () => {
   assert.equal(getYouTubeId(`https://www.youtube.com/shorts/${id}`), id);
 });
 
-test("duration lookup accepts recordings and rejects unavailable or live metadata", async () => {
-  const response = html => async () => ({ ok: true, text: async () => html });
-  assert.equal(await getVideoDuration("VzXYvyFqM4Y", response('{"lengthSeconds":"1234"}')), 1234);
-  await assert.rejects(getVideoDuration("VzXYvyFqM4Y", response("consent page")));
-  await assert.rejects(getVideoDuration("VzXYvyFqM4Y", response('{"lengthSeconds":"0"}')));
-  await assert.rejects(getVideoDuration("VzXYvyFqM4Y", response('{"lengthSeconds":"1234","isLiveNow":true}')));
-  await assert.rejects(getVideoDuration("VzXYvyFqM4Y", async () => ({ ok: false })));
+test("parses YouTube durations including long concerts", () => {
+  assert.equal(parseDuration("PT1H2M18S"), 3738);
+  assert.equal(parseDuration("PT45M"), 2700);
+  assert.equal(parseDuration("P1DT2H"), 93600);
+  for (const value of [undefined, "", "PT0S", "PT", "invalid"]) assert.throws(() => parseDuration(value));
 });
 
-test("metadata combines YouTube title and duration and rejects missing titles", async () => {
-  let title = 'Grupė — "Gyvai" & draugai';
-  const fetchImpl = async url => url.includes("/oembed?")
-    ? { ok: true, json: async () => ({ title }) }
-    : { ok: true, text: async () => '{"lengthSeconds":"1234"}' };
-  assert.deepEqual(await getVideoMetadata("VzXYvyFqM4Y", fetchImpl), { title, duration: 1234 });
-  title = " ";
-  await assert.rejects(getVideoMetadata("VzXYvyFqM4Y", fetchImpl), /Missing YouTube title/);
+test("extracts metadata using issue body duration and oEmbed title", async () => {
+  const id = "qYOr8TlnqsY";
+  const expectedTitle = 'Grupė — "Gyvai" & draugai';
+  const fetchImpl = async (url) => {
+    assert.equal(new URL(url).hostname, "www.youtube.com");
+    return { ok: true, json: async () => ({ title: expectedTitle }) };
+  };
+
+  const bodyWithDuration = "### YouTube URL\n\nhttps://youtu.be/qYOr8TlnqsY\n\n### Duration\n\n3738";
+  assert.deepEqual(await getVideoMetadata(id, fetchImpl, bodyWithDuration), { title: expectedTitle, duration: 3738 });
+
+  const bodyWithBoth = "### YouTube URL\n\nhttps://youtu.be/qYOr8TlnqsY\n\n### Title\n\nCustom Title\n\n### Duration\n\n1234";
+  assert.deepEqual(await getVideoMetadata(id, fetchImpl, bodyWithBoth), { title: "Custom Title", duration: 1234 });
+
+  await assert.rejects(getVideoMetadata(id, fetchImpl, "### YouTube URL\n\nhttps://youtu.be/qYOr8TlnqsY"), /valid recording duration/);
+  await assert.rejects(getVideoMetadata(id, async () => ({ ok: false, status: 404 }), bodyWithDuration), /HTTP 404/);
 });
 
 test("failed duration lookup leaves the concert and playlist unpublished", async () => {
