@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   publish:
-    if: github.event.issue.state == 'open' && contains(github.event.issue.body, '### YouTube URL') && contains(github.event.issue.body, '### Concert title')
+    if: github.event.issue.state == 'open' && contains(github.event.issue.body, '### YouTube URL')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

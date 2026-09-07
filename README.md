@@ -30,9 +30,9 @@ visitors can click to join with sound. The player checks the schedule every seco
 corrects drift over three seconds, and rejoins the current position after a pause.
 
 New submissions automatically join the Live playlist when published. The existing
-GitHub Actions publishing workflow reads each recording's duration from YouTube
+GitHub Actions publishing workflow reads each recording's title and duration from YouTube
 and saves both the concert and playlist in the same commit. No backend or API key
-is needed. If YouTube does not return a valid duration, the issue remains open
+is needed. If YouTube does not return a valid title and duration, the issue remains open
 with a retry message; editing the issue retries publishing.
 
 Open Live pages check the static playlist every minute and when returning to the
@@ -46,7 +46,7 @@ onto different concerts.
 
 ## How a Submission Is Published
 
-1. A visitor fills out the form on the website, creating a GitHub issue.
+1. A visitor pastes a YouTube URL into the form, creating a GitHub issue. The title is retrieved automatically from YouTube metadata.
 2. `publish-video.yml` validates the link and checks that the visitor has not submitted 5 posts within the last 24 hours.
 3. A valid submission is immediately saved to `content/videos/`; the workflow leaves a comment and closes the issue.
 4. `deploy-atvirascena.yml` rebuilds and publishes the website.

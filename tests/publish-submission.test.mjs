@@ -7,6 +7,7 @@ import {
   countRecentSubmissions,
   getYouTubeId,
   getVideoDuration,
+  getVideoMetadata,
   publish,
   readSection
 } from "../scripts/publish-submission.mjs";
@@ -26,6 +27,16 @@ test("duration lookup accepts recordings and rejects unavailable or live metadat
   await assert.rejects(getVideoDuration("VzXYvyFqM4Y", response('{"lengthSeconds":"0"}')));
   await assert.rejects(getVideoDuration("VzXYvyFqM4Y", response('{"lengthSeconds":"1234","isLiveNow":true}')));
   await assert.rejects(getVideoDuration("VzXYvyFqM4Y", async () => ({ ok: false })));
+});
+
+test("metadata combines YouTube title and duration and rejects missing titles", async () => {
+  let title = 'Grupė — "Gyvai" & draugai';
+  const fetchImpl = async url => url.includes("/oembed?")
+    ? { ok: true, json: async () => ({ title }) }
+    : { ok: true, text: async () => '{"lengthSeconds":"1234"}' };
+  assert.deepEqual(await getVideoMetadata("VzXYvyFqM4Y", fetchImpl), { title, duration: 1234 });
+  title = " ";
+  await assert.rejects(getVideoMetadata("VzXYvyFqM4Y", fetchImpl), /Missing YouTube title/);
 });
 
 test("failed duration lookup leaves the concert and playlist unpublished", async () => {
@@ -63,8 +74,8 @@ test("creates safe Hugo content and adds the submission to Live", async () => {
   const previousOutput = process.env.GITHUB_OUTPUT;
   const event = {
     issue: {
-      title: "[Video submission] Live in France",
-      body: "### YouTube URL\n\nhttps://youtu.be/VzXYvyFqM4Y\n\n### Concert title\n\nLive in France",
+      title: "[Video submission] VzXYvyFqM4Y",
+      body: "### YouTube URL\n\nhttps://youtu.be/VzXYvyFqM4Y",
       user: { login: "concert-fan" }
     }
   };
@@ -75,7 +86,7 @@ test("creates safe Hugo content and adds the submission to Live", async () => {
     process.env.GITHUB_OUTPUT = outputPath;
     fs.mkdirSync(path.join(directory, "data"));
     fs.writeFileSync(path.join(directory, "data/live.json"), JSON.stringify({epoch: "2026-09-01T00:00:00Z", tracks: []}));
-    await publish(eventPath, directory, new Date(), async () => 1234);
+    await publish(eventPath, directory, new Date(), async () => ({ title: "Live in France", duration: 1234 }));
     const schedule = JSON.parse(fs.readFileSync(path.join(directory, "data/live.json")));
     assert.deepEqual(schedule.tracks, [{id: "VzXYvyFqM4Y", title: "Live in France", duration: 1234}]);
 

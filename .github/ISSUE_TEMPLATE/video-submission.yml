@@ -10,14 +10,6 @@ body:
       placeholder: https://www.youtube.com/watch?v=...
     validations:
       required: true
-  - type: input
-    id: concert-title
-    attributes:
-      label: Concert title
-      description: Atlikėjas, renginys arba koncerto pavadinimas.
-      placeholder: Grupė — gyvai Vilniuje
-    validations:
-      required: false
   - type: checkboxes
     id: confirmation
     attributes:

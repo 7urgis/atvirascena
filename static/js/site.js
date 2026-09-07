@@ -106,7 +106,6 @@ if (form) {
     event.preventDefault();
 
     const urlInput = form.querySelector("#youtube-url");
-    const titleInput = form.querySelector("#concert-title");
     const error = form.querySelector("#url-error");
     const videoId = getYouTubeId(urlInput.value);
 
@@ -120,16 +119,11 @@ if (form) {
     urlInput.removeAttribute("aria-invalid");
     error.textContent = "";
 
-    const suppliedTitle = titleInput.value.trim();
-    const issueTitle = `[Video submission] ${suppliedTitle || videoId}`;
+    const issueTitle = `[Video submission] ${videoId}`;
     const issueBody = [
       "### YouTube URL",
       "",
       urlInput.value.trim(),
-      "",
-      "### Concert title",
-      "",
-      suppliedTitle || "(not provided)",
       "",
       "---",
       "Submitted through the AtviraScena website."

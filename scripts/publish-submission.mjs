@@ -88,7 +88,20 @@ export async function getVideoDuration(videoId, fetchImpl = fetch) {
   return duration;
 }
 
-export async function publish(eventPath, projectRoot, now = new Date(), durationLookup = getVideoDuration) {
+export async function getVideoMetadata(videoId, fetchImpl = fetch) {
+  const [duration, response] = await Promise.all([
+    getVideoDuration(videoId, fetchImpl),
+    fetchImpl(`https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}&format=json`, {
+      signal: AbortSignal.timeout(20000)
+    })
+  ]);
+  if (!response.ok) throw new Error("YouTube title request failed");
+  const metadata = await response.json();
+  if (typeof metadata.title !== "string" || !metadata.title.trim()) throw new Error("Missing YouTube title");
+  return { title: metadata.title.trim(), duration };
+}
+
+export async function publish(eventPath, projectRoot, now = new Date(), metadataLookup = getVideoMetadata) {
   const event = JSON.parse(fs.readFileSync(eventPath, "utf8"));
   const body = event.issue?.body ?? "";
   const youtubeUrl = readSection(body, "YouTube URL");
@@ -118,11 +131,18 @@ export async function publish(eventPath, projectRoot, now = new Date(), duration
     return;
   }
 
-  const submittedTitle = readSection(body, "Concert title");
-  const fallbackTitle = event.issue?.title?.replace(/^\[Video submission\]\s*/, "").trim();
-  const title = submittedTitle && submittedTitle !== "(not provided)"
-    ? submittedTitle.slice(0, 120)
-    : (fallbackTitle || `YouTube concert ${videoId}`).slice(0, 120);
+  let title;
+  let duration;
+  try {
+    ({ title, duration } = await metadataLookup(videoId));
+    if (!Number.isSafeInteger(duration) || duration <= 0 || typeof title !== "string" || !title.trim()) {
+      throw new Error("Invalid metadata");
+    }
+    title = title.trim();
+  } catch {
+    finish("metadata_unavailable", "Nepavyko gauti įrašo pavadinimo arba trukmės. Reikalingas viešas pasibaigusio koncerto įrašas. Pabandykite vėliau redaguodami šį pasiūlymą.");
+    return;
+  }
   const frontMatter = {
     title,
     date: now.toISOString(),
@@ -131,14 +151,6 @@ export async function publish(eventPath, projectRoot, now = new Date(), duration
     submitted_by: submitter
   };
 
-  let duration;
-  try {
-    duration = await durationLookup(videoId);
-    if (!Number.isSafeInteger(duration) || duration <= 0) throw new Error("Invalid duration");
-  } catch {
-    finish("metadata_unavailable", "Nepavyko nustatyti įrašo trukmės. Reikalingas pasibaigusio koncerto įrašas. Pabandykite vėliau redaguodami šį pasiūlymą.");
-    return;
-  }
   const schedulePath = path.join(projectRoot, "data", "live.json");
   const schedule = JSON.parse(fs.readFileSync(schedulePath, "utf8"));
   if (!schedule.tracks.some(track => track.id === videoId)) {
