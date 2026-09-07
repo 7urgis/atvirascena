@@ -1,0 +1,23 @@
+{{ define "main" }}
+  <main class="page-shell">
+    <section class="featured" aria-labelledby="live-heading">
+      <div class="section-heading">
+        <h1 id="live-heading">Live</h1>
+        <span>Visiems tas pats koncertas tuo pačiu metu.</span>
+      </div>
+      <div class="featured-player live-player"><div id="live-player"></div></div>
+      <div class="featured-details">
+        <div>
+          <h2 id="live-title">Jungiama…</h2>
+          <p id="live-next"></p>
+          <p id="live-status" role="status">Kraunamas grotuvas…</p>
+        </div>
+        <button class="primary-button" id="live-join" type="button" disabled>Prisijungti su garsu</button>
+      </div>
+      <noscript><p>Norint žiūrėti „Live“, reikia įjungti „JavaScript“.</p></noscript>
+    </section>
+  </main>
+  {{ $schedule := resources.FromString "live/schedule.json" (site.Data.live | jsonify) }}
+  <script id="live-schedule" type="application/json" data-url="{{ $schedule.RelPermalink }}">{{ site.Data.live | jsonify | safeJS }}</script>
+  <script type="module" src="{{ "js/live.mjs" | relURL }}"></script>
+{{ end }}

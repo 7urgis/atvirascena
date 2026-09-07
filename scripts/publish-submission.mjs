@@ -75,7 +75,20 @@ export function countRecentSubmissions(videosDirectory, submitter, now = new Dat
     }, 0);
 }
 
-export function publish(eventPath, projectRoot, now = new Date()) {
+export async function getVideoDuration(videoId, fetchImpl = fetch) {
+  const response = await fetchImpl(`https://www.youtube.com/watch?v=${videoId}`, {
+    signal: AbortSignal.timeout(20000)
+  });
+  if (!response.ok) throw new Error("YouTube metadata request failed");
+  const html = await response.text();
+  const duration = Number(html.match(/"lengthSeconds"\s*:\s*"(\d+)"/)?.[1]);
+  if (!Number.isSafeInteger(duration) || duration <= 0 || /"isLiveNow"\s*:\s*true/.test(html)) {
+    throw new Error("A recording with a known duration is required");
+  }
+  return duration;
+}
+
+export async function publish(eventPath, projectRoot, now = new Date(), durationLookup = getVideoDuration) {
   const event = JSON.parse(fs.readFileSync(eventPath, "utf8"));
   const body = event.issue?.body ?? "";
   const youtubeUrl = readSection(body, "YouTube URL");
@@ -118,8 +131,23 @@ export function publish(eventPath, projectRoot, now = new Date()) {
     submitted_by: submitter
   };
 
+  let duration;
+  try {
+    duration = await durationLookup(videoId);
+    if (!Number.isSafeInteger(duration) || duration <= 0) throw new Error("Invalid duration");
+  } catch {
+    finish("metadata_unavailable", "Nepavyko nustatyti įrašo trukmės. Reikalingas pasibaigusio koncerto įrašas. Pabandykite vėliau redaguodami šį pasiūlymą.");
+    return;
+  }
+  const schedulePath = path.join(projectRoot, "data", "live.json");
+  const schedule = JSON.parse(fs.readFileSync(schedulePath, "utf8"));
+  if (!schedule.tracks.some(track => track.id === videoId)) {
+    schedule.tracks.push({ id: videoId, title, duration });
+  }
+  frontMatter.duration = duration;
   fs.mkdirSync(videosDirectory, { recursive: true });
   fs.writeFileSync(destination, `${JSON.stringify(frontMatter, null, 2)}\n`);
+  fs.writeFileSync(schedulePath, `${JSON.stringify(schedule, null, 2)}\n`);
   finish("published", `Ačiū! „${title}“ paskelbtas svetainėje.`, videoId);
 }
 
@@ -133,6 +161,5 @@ if (import.meta.url === invokedPath) {
     process.exit(1);
   }
 
-  publish(eventPath, projectRoot);
+  await publish(eventPath, projectRoot);
 }
-

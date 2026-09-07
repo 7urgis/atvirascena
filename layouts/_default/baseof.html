@@ -16,7 +16,10 @@
         <span class="brand-mark" aria-hidden="true">▶</span>
         <span> AtviraScena</span>
       </a>
-      <a class="header-action" href="#prideti">Pridėti koncertą</a>
+      <nav class="header-nav" aria-label="Pagrindinis meniu">
+        <a class="header-action live-link" href="{{ "live/" | relURL }}"{{ if eq .Layout "live" }} aria-current="page"{{ end }}><span class="live-dot" aria-hidden="true"></span>Live</a>
+        <a class="header-action" href="{{ site.Home.RelPermalink }}#prideti">＋ Pridėti koncertą</a>
+      </nav>
     </header>
 
     {{ block "main" . }}{{ end }}
@@ -26,4 +29,3 @@
     </footer>
   </body>
 </html>
-

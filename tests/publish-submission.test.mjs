@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   countRecentSubmissions,
   getYouTubeId,
+  getVideoDuration,
   publish,
   readSection
 } from "../scripts/publish-submission.mjs";
@@ -16,6 +17,31 @@ test("extracts IDs from supported YouTube URLs", () => {
   assert.equal(getYouTubeId(`https://youtu.be/${id}`), id);
   assert.equal(getYouTubeId(`https://www.youtube.com/live/${id}`), id);
   assert.equal(getYouTubeId(`https://www.youtube.com/shorts/${id}`), id);
+});
+
+test("duration lookup accepts recordings and rejects unavailable or live metadata", async () => {
+  const response = html => async () => ({ ok: true, text: async () => html });
+  assert.equal(await getVideoDuration("VzXYvyFqM4Y", response('{"lengthSeconds":"1234"}')), 1234);
+  await assert.rejects(getVideoDuration("VzXYvyFqM4Y", response("consent page")));
+  await assert.rejects(getVideoDuration("VzXYvyFqM4Y", response('{"lengthSeconds":"0"}')));
+  await assert.rejects(getVideoDuration("VzXYvyFqM4Y", response('{"lengthSeconds":"1234","isLiveNow":true}')));
+  await assert.rejects(getVideoDuration("VzXYvyFqM4Y", async () => ({ ok: false })));
+});
+
+test("failed duration lookup leaves the concert and playlist unpublished", async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "atvira-scena-"));
+  try {
+    const eventPath = path.join(directory, "event.json");
+    fs.writeFileSync(eventPath, JSON.stringify({ issue: {
+      body: "### YouTube URL\n\nhttps://youtu.be/VzXYvyFqM4Y\n\n### Concert title\n\nTest",
+      user: { login: "fan" }
+    } }));
+    await publish(eventPath, directory, new Date(), async () => { throw new Error("Unavailable"); });
+    assert.equal(fs.existsSync(path.join(directory, "content")), false);
+    assert.equal(fs.existsSync(path.join(directory, "data")), false);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("rejects unsupported and malformed URLs", () => {
@@ -30,7 +56,7 @@ test("reads GitHub issue form sections", () => {
   assert.equal(readSection(body, "Concert title"), "Live in France");
 });
 
-test("creates safe Hugo content from a submitted issue", () => {
+test("creates safe Hugo content and adds the submission to Live", async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "atvira-scena-"));
   const eventPath = path.join(directory, "event.json");
   const outputPath = path.join(directory, "output.txt");
@@ -47,7 +73,11 @@ test("creates safe Hugo content from a submitted issue", () => {
     fs.writeFileSync(eventPath, JSON.stringify(event));
     fs.writeFileSync(outputPath, "");
     process.env.GITHUB_OUTPUT = outputPath;
-    publish(eventPath, directory);
+    fs.mkdirSync(path.join(directory, "data"));
+    fs.writeFileSync(path.join(directory, "data/live.json"), JSON.stringify({epoch: "2026-09-01T00:00:00Z", tracks: []}));
+    await publish(eventPath, directory, new Date(), async () => 1234);
+    const schedule = JSON.parse(fs.readFileSync(path.join(directory, "data/live.json")));
+    assert.deepEqual(schedule.tracks, [{id: "VzXYvyFqM4Y", title: "Live in France", duration: 1234}]);
 
     const content = JSON.parse(fs.readFileSync(path.join(directory, "content/videos/VzXYvyFqM4Y.md"), "utf8"));
     assert.equal(content.title, "Live in France");
@@ -86,7 +116,7 @@ test("counts only a user's successful submissions from the previous 24 hours", (
   }
 });
 
-test("rejects a sixth successful submission within 24 hours", () => {
+test("rejects a sixth successful submission within 24 hours", async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "atvira-scena-"));
   const eventPath = path.join(directory, "event.json");
   const outputPath = path.join(directory, "output.txt");
@@ -116,7 +146,7 @@ test("rejects a sixth successful submission within 24 hours", () => {
     fs.writeFileSync(outputPath, "");
     process.env.GITHUB_OUTPUT = outputPath;
 
-    publish(eventPath, directory, now);
+    await publish(eventPath, directory, now);
 
     assert.equal(fs.existsSync(path.join(videosDirectory, "lGUWlDeFfzo.md")), false);
     assert.match(fs.readFileSync(outputPath, "utf8"), /status.*rate_limited/s);
